@@ -38,6 +38,24 @@ app.include_router(export.router)
 app.include_router(integrations.router)
 
 
+@app.on_event("startup")
+def _startup_reindex() -> None:
+    # On ephemeral-storage hosts, rebuild the vector store from Postgres so RAG keeps working.
+    if not settings.reindex_on_startup:
+        return
+    from app.database import SessionLocal
+    from app.indexing import reindex_all
+
+    db = SessionLocal()
+    try:
+        n = reindex_all(db)
+        print(f"[startup] re-indexed {n} entries into the vector store")
+    except Exception as exc:  # don't let indexing failure block the app from serving
+        print(f"[startup] reindex skipped: {exc}")
+    finally:
+        db.close()
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

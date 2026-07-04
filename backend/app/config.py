@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     chroma_host: str = "localhost"
     chroma_port: int = 8001
+    # Embedded mode runs ChromaDB in-process (used on Hugging Face Spaces, which is a single
+    # container). Local dev keeps this False and uses the separate Chroma Docker container.
+    chroma_embedded: bool = False
+    chroma_path: str = "/tmp/ojas_chroma"
+    # Re-index the vector store from Postgres on startup (needed on hosts with ephemeral storage).
+    reindex_on_startup: bool = False
 
     # Comma-separated list of frontend origins allowed to call this API (CORS).
     cors_origins: str = "http://localhost:5173"

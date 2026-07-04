@@ -9,7 +9,12 @@ _collection = None
 def _get_collection():
     global _client, _collection
     if _collection is None:
-        _client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
+        if settings.chroma_embedded:
+            # In-process Chroma (single-container hosts like Hugging Face Spaces).
+            _client = chromadb.PersistentClient(path=settings.chroma_path)
+        else:
+            # Separate Chroma server (local Docker Compose).
+            _client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
         _collection = _client.get_or_create_collection("ojas_entries")
     return _collection
 
