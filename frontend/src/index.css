@@ -1,0 +1,77 @@
+/* Google Fonts — must come before other imports */
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+/*
+  Tailwind v4 theme tokens — these generate utility classes like `text-ink`, `bg-surface`,
+  `font-display`, etc. Colors that change at runtime (accent, mood) reference CSS variables
+  (defined in :root below), so updating those variables from JS live-updates the whole UI.
+*/
+@theme {
+  --font-display: 'Spectral', serif;
+  --font-body: 'Figtree', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Neutrals & surface */
+  --color-app: #f1f6fc;
+  --color-surface: #ffffff;
+  --color-ink: #22314f;
+  --color-body: #33425f;
+  --color-body-soft: #5a6b8c;
+  --color-muted: #7c8aa6;
+  --color-faint: #93a0bc;
+  --color-track: #edf2fa;
+  --color-soft: #f5f8fc;
+
+  /* Accent (theme-switchable) — reference runtime vars */
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-soft: var(--accent-soft);
+
+  /* Semantic */
+  --color-success: #4e9a7c;
+  --color-caution: #c0879e;
+  --color-record: #f2607d;
+  --color-cycle: #d98baa;
+}
+
+/*
+  Runtime-changeable variables. JS updates these on <html> when the user changes
+  accent theme or mood; the cascade updates every element referencing them.
+*/
+:root {
+  /* Default accent = Sky blue */
+  --accent: #4f93d9;
+  --accent-deep: #2f6db0;
+  --accent-soft: #e7f0fb;
+
+  /* Default mood = Calm */
+  --mood-tint: #edf4fb;
+  --mood-glow: #6fc0e8;
+  --mascot-float: 6.5s;
+  --mascot-breathe: 4.8s;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-body);
+  background: var(--mood-tint);
+  transition: background 0.9s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mascot + ambient keyframes (from the design spec) */
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes glowpulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes typing { 0%,60%,100% { opacity: 0.3; } 30% { opacity: 1; } }
+
+.animate-rise { animation: rise 0.4s ease both; }
+
+/* Respect the OS "reduce motion" setting globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,7 @@
+# Never copy these into the image (huge, machine-specific, or secret)
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+.pytest_cache/

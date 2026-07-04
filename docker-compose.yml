@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ojas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ojas
+      POSTGRES_PASSWORD: ojas_dev_password
+      POSTGRES_DB: ojas
+    ports:
+      - "5432:5432"
+    volumes:
+      - ojas_postgres_data:/var/lib/postgresql/data
+    # Periodically check the DB is actually accepting connections (not just "started").
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ojas -d ojas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ojas-chroma
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - ojas_chroma_data:/chroma/chroma
+
+  api:
+    build: ./backend
+    container_name: ojas-api
+    restart: unless-stopped
+    # Load config from backend/.env (secrets like GROQ_API_KEY), then OVERRIDE the
+    # networking vars below — inside Docker's network, services reach each other by
+    # SERVICE NAME (postgres, chromadb) on the container's INTERNAL port, not localhost.
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://ojas:ojas_dev_password@postgres:5432/ojas
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy   # wait until the healthcheck above passes
+      chromadb:
+        condition: service_started
+
+volumes:
+  ojas_postgres_data:
+  ojas_chroma_data:

@@ -1,0 +1,33 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+psycopg2-binary
+pydantic
+pydantic-settings
+email-validator
+python-jose[cryptography]
+bcrypt
+python-multipart
+python-dotenv
+
+# Sentiment/emotion scoring (Phase 4) — install torch FIRST with the CPU-only wheel:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# otherwise plain `pip install -r requirements.txt` may pull PyPI's much larger GPU build.
+torch
+transformers
+
+# RAG chat layer (Phase 5)
+chromadb
+langchain
+langchain-groq
+
+# Testing (Phase 6)
+pytest
+
+# External integrations (Phase 7)
+boto3                       # AWS S3 client
+fpdf2                       # PDF generation for data export
+google-auth                 # Google OAuth token handling
+google-auth-oauthlib        # Google OAuth consent/authorization flow
+google-api-python-client    # Google Calendar API client
