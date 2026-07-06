@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, setToken } from '../lib/api'
+import { api, setToken, setUserName } from '../lib/api'
 import { AuthMascot } from '../components/AuthMascot'
 
 const inputBase =
@@ -42,6 +42,13 @@ export function Login() {
       const form = new URLSearchParams({ username: email, password })
       const res = await api.post('/auth/login', form)
       setToken(res.data.access_token)
+      // Cache the user's name so the dashboard greeting shows it instantly.
+      try {
+        const me = await api.get('/auth/me')
+        setUserName(me.data.name)
+      } catch {
+        // If /auth/me is slow (backend waking up), the dashboard still fetches it itself.
+      }
       navigate('/dashboard')
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Something went wrong. Please try again.')

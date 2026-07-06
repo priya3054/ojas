@@ -2088,3 +2088,48 @@ middleware. The CI workflow, prod config, and deploy guide are all in place — 
 (GitHub push + Vercel/Railway account setup) are done through those platforms' dashboards.
 
 ---
+
+## Phase 10 — CI/CD + Deployment (DONE — app is live)
+
+**Goal:** automated checks on every push, and the whole app live on the internet for free.
+
+### CI/CD
+- **GitHub Actions** (`.github/workflows/ci.yml`): on every push it runs two jobs — backend `pytest`
+  (against a throwaway Postgres service) and frontend typecheck+build. Green checks = nothing broke.
+- Pushed the repo to GitHub (`github.com/priya3054/ojas`); CI ran and passed automatically.
+
+### The three-piece free deployment
+Different parts of the app need different kinds of hosting, so they live in three places:
+- **Frontend → Vercel** (free, perfect for static React/Vite sites on a global CDN).
+- **Backend → Hugging Face Spaces** (free tier gives **16 GB RAM** — enough to run the full PyTorch
+  sentiment model + ChromaDB, which 512 MB free tiers like Render can't). Deployed as a Docker Space.
+- **Database → Neon** (free serverless Postgres; HF Spaces don't include a database).
+
+### Production-readiness changes made
+- **CORS** (`main.py`): the browser blocks a frontend from calling an API on a *different* origin unless
+  the API explicitly allows it. Added `CORSMiddleware` reading allowed origins from `CORS_ORIGINS`.
+- **Config-driven API URL** (`api.ts`): dev uses the Vite proxy (`/api`); production reads `VITE_API_URL`
+  (the HF Space URL), set in Vercel's env vars.
+- **ChromaDB embedded mode** (`vectorstore.py`): on a single-container host, run Chroma *in-process*
+  (`PersistentClient`) instead of as a separate service — toggled by `CHROMA_EMBEDDED`.
+- **Startup re-indexing** (`indexing.py` + a startup hook): HF Spaces have *ephemeral* storage (wiped on
+  restart), so on boot we rebuild the vector store from Postgres (the durable source of truth). Gated by
+  `REINDEX_ON_STARTUP` so local dev is unaffected.
+- **HF-compatible Dockerfile**: listens on `${PORT:-8000}` (HF sets `PORT=7860`), sets a writable
+  `HF_HOME`, and **pre-downloads the sentiment model at build time** so cold starts are fast.
+- **HF Space `README.md`** with the required metadata frontmatter (`sdk: docker`, `app_port: 7860`).
+
+### Key concepts learned
+- **Why frontend and backend deploy to different hosts:** a static site (files on a CDN) and a long-lived
+  ML server (a big always-on process with a model in memory) are fundamentally different workloads.
+- **Environment variables per platform:** the same code runs everywhere; only the injected config
+  (`DATABASE_URL`, `SECRET_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS`, `VITE_API_URL`, …) differs per host.
+  Secrets go in each platform's secret store, never in git.
+- **Free-tier trade-offs:** the HF Space sleeps after ~48h idle and takes ~30–60s to wake — normal for
+  free ML hosting.
+
+### Result
+Live end-to-end: `ojas-nine.vercel.app` (frontend) → `priya3054-ojas-api.hf.space` (backend) → Neon +
+Groq. Verified with a real register + login against the production database.
+
+---

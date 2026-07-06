@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Sparkles } from 'lucide-react'
@@ -6,6 +6,7 @@ import { Card } from '../components/Card'
 import { Mascot } from '../components/Mascot'
 import { useApp } from '../context/AppContext'
 import { MOODS } from '../data/theme'
+import { getUserName, setUserName } from '../lib/api'
 import {
   useHabits,
   useMe,
@@ -64,7 +65,14 @@ export function Dashboard() {
   const screen = useScreenTimeToday()
   const moodSeries = useMoodSeries(range)
 
-  const name = me.data?.name ?? '—'
+  // Prefer the freshly-fetched name; fall back to the one cached at login (instant,
+  // avoids showing a placeholder while the backend wakes up); then a friendly default.
+  const name = me.data?.name ?? getUserName() ?? 'there'
+
+  // Keep the cached name fresh for instant display on the next visit.
+  useEffect(() => {
+    if (me.data?.name) setUserName(me.data.name)
+  }, [me.data?.name])
   const bestStreak = habits.data?.length ? Math.max(...habits.data.map((h) => h.streak)) : 0
   const adherence = summary.data?.adherence_pct
   const activeMood = MOODS[mood as keyof typeof MOODS] ?? MOODS.calm
