@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card } from '../components/Card'
 import { Mascot } from '../components/Mascot'
-import { useCycleStatus, useLogCycle } from '../lib/hooks'
+import { useCycleStatus, useInsight, useLogCycle } from '../lib/hooks'
 
 const PHASES = [
   { key: 'menstrual', label: 'Menstrual', color: '#D98BAA' },
@@ -35,6 +35,7 @@ function CycleRing({ day, length, phase }: { day: number; length: number; phase:
 export function Cycle() {
   const status = useCycleStatus()
   const log = useLogCycle()
+  const insight = useInsight('cycle')
   const [selected, setSelected] = useState<string[]>([])
 
   const day = status.data?.cycle_day ?? 0
@@ -132,8 +133,7 @@ export function Cycle() {
         <div>
           <h3 className="mb-1 font-display text-[18px] font-semibold">Cycle × Mood</h3>
           <p className="text-[13.5px] leading-relaxed text-white/85">
-            Your mood tends to soften in the late luteal phase. Ojas can ease reminders and suggest gentler
-            goals around then. This is a pattern in your own data — not a diagnosis or medical advice.
+            {insight.isLoading ? 'Looking gently at how your mood moves with your cycle…' : insight.data ?? 'Log your cycle and moods for a while and Ojas will notice gentle patterns — never a diagnosis.'}
           </p>
         </div>
       </Card>

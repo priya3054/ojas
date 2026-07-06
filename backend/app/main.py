@@ -9,10 +9,12 @@ from app.routers import (
     discover,
     export,
     habits,
+    insights,
     integrations,
     journal,
     medicine,
     screen_time,
+    users,
 )
 
 app = FastAPI(title="Ojas API")
@@ -36,6 +38,8 @@ app.include_router(chat.router)
 app.include_router(discover.router)
 app.include_router(export.router)
 app.include_router(integrations.router)
+app.include_router(users.router)
+app.include_router(insights.router)
 
 
 @app.on_event("startup")

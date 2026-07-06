@@ -7,6 +7,7 @@ import {
   useCheckInHabit,
   useHabitWeek,
   useHabits,
+  useInsight,
   type HabitSummary,
 } from '../lib/hooks'
 
@@ -111,6 +112,7 @@ function HabitCard({ habit, active }: { habit: HabitSummary; active: boolean }) 
 export function Habits() {
   const habits = useHabits()
   const add = useAddHabit()
+  const insight = useInsight('habits')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
@@ -158,8 +160,7 @@ export function Habits() {
         <div>
           <h3 className="mb-1 font-display text-[18px] font-semibold">A pattern, not a diagnosis</h3>
           <p className="text-[13.5px] leading-relaxed text-white/85">
-            On days you slip on phone-scrolling, your sleep tends to run shorter — and the next morning's
-            mood often dips with it. Ojas noticed this across your habit, screen-time and journal logs.
+            {insight.isLoading ? 'Looking across your habit, screen-time and journal logs…' : insight.data ?? 'Check in for a few days and Ojas will surface patterns here.'}
           </p>
         </div>
       </Card>

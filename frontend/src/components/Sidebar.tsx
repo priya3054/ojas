@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom'
-import { Shield, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { Shield, ChevronRight, Settings, LogOut } from 'lucide-react'
 import { NAV_ITEMS } from '../data/nav'
 import { Mascot } from './Mascot'
+import { clearToken, clearUserName, getUserName } from '../lib/api'
 
 interface SidebarProps {
   open?: boolean
@@ -9,6 +11,16 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open = false, onNavigate }: SidebarProps) {
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const displayName = getUserName() ?? 'You'
+
+  function logout() {
+    clearToken()
+    clearUserName()
+    navigate('/login')
+  }
+
   return (
     <aside
       className={
@@ -71,18 +83,45 @@ export function Sidebar({ open = false, onNavigate }: SidebarProps) {
           <Shield size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-accent-deep" />
           <span>Not a medical device. No diagnoses. Crisis-safe support built in.</span>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl px-2 py-1.5">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
-            style={{ background: 'var(--accent-deep)' }}
+        <div className="relative">
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+              <div
+                className="absolute bottom-full left-0 z-40 mb-2 w-full overflow-hidden rounded-xl border bg-surface py-1 shadow-lg"
+                style={{ borderColor: 'rgba(40,60,110,0.1)' }}
+              >
+                <button
+                  onClick={() => { setMenuOpen(false); onNavigate?.(); navigate('/settings') }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-body hover:bg-soft"
+                >
+                  <Settings size={15} /> Settings
+                </button>
+                <button
+                  onClick={logout}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-caution hover:bg-soft"
+                >
+                  <LogOut size={15} /> Log out
+                </button>
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex w-full items-center gap-2 rounded-2xl px-2 py-1.5 hover:bg-[rgba(79,147,217,0.06)]"
           >
-            P
-          </div>
-          <div className="flex-1 leading-tight">
-            <div className="text-[13px] font-semibold text-ink">Priya</div>
-            <div className="text-[11px] text-muted">Free plan</div>
-          </div>
-          <ChevronRight size={16} className="text-faint" />
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold uppercase text-white"
+              style={{ background: 'var(--accent-deep)' }}
+            >
+              {displayName.charAt(0)}
+            </div>
+            <div className="flex-1 text-left leading-tight">
+              <div className="text-[13px] font-semibold text-ink">{displayName}</div>
+              <div className="text-[11px] text-muted">Free plan</div>
+            </div>
+            <ChevronRight size={16} className="text-faint" />
+          </button>
         </div>
       </div>
     </aside>

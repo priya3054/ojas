@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Send, Shield } from 'lucide-react'
 import { Card } from '../components/Card'
 import { Mascot } from '../components/Mascot'
@@ -30,6 +31,19 @@ export function Chat() {
   const chat = useChat()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const seeded = useRef(false)
+
+  // If arrived via the top-bar search (?q=…) or a click-to-explain link, auto-send once.
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q && !seeded.current) {
+      seeded.current = true
+      ask(q)
+      setSearchParams({}, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   function ask(question: string) {
     if (!question.trim()) return

@@ -3,6 +3,7 @@ import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, XAxis, Tooltip
 import { Card } from '../components/Card'
 import { Mascot } from '../components/Mascot'
 import {
+  useInsight,
   useLogScreenTime,
   useScreenTimeLogs,
   useScreenTimeToday,
@@ -34,6 +35,7 @@ export function ScreenTime() {
   const logs = useScreenTimeLogs(7)
   const updateGoal = useUpdateScreenGoal()
   const logToday = useLogScreenTime()
+  const insight = useInsight('screen_time')
   const [logValue, setLogValue] = useState('')
 
   const goal = today.data?.goal_hours ?? 3.5
@@ -115,9 +117,7 @@ export function ScreenTime() {
         <div>
           <h3 className="mb-1 font-display text-[18px] font-semibold">Weekly insight</h3>
           <p className="text-[13.5px] leading-relaxed text-white/85">
-            Your highest screen-time days this week lined up with your shortest sleep — and the next
-            morning's mood tended to dip. Correlated across your screen-time, journal and habit logs. A
-            pattern, not a diagnosis.
+            {insight.isLoading ? 'Correlating your screen-time, journal and habit logs…' : insight.data ?? 'Log a few days of screen time and Ojas will spot patterns here.'}
           </p>
         </div>
       </Card>

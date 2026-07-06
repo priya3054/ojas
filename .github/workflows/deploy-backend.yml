@@ -1,0 +1,42 @@
+name: Deploy backend to Hugging Face
+
+# Auto-push the backend to the HF Space whenever backend code changes on main.
+# Requires a repo secret HF_TOKEN (a Hugging Face "write" access token).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Upload backend to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          HfApi(token=os.environ["HF_TOKEN"]).upload_folder(
+              folder_path="backend",
+              repo_id="priya3054/ojas-api",
+              repo_type="space",
+              ignore_patterns=["venv/**", "**/__pycache__/**", "*.pyc", ".env", "*.pdf", ".pytest_cache/**"],
+              commit_message="Deploy from GitHub Actions",
+          )
+          print("Backend uploaded to the Space.")
+          PY

@@ -9,6 +9,7 @@ import { MOODS } from '../data/theme'
 import { getUserName, setUserName } from '../lib/api'
 import {
   useHabits,
+  useInsight,
   useMe,
   useMedicineSummary,
   useMoodSeries,
@@ -64,6 +65,7 @@ export function Dashboard() {
   const habits = useHabits()
   const screen = useScreenTimeToday()
   const moodSeries = useMoodSeries(range)
+  const insight = useInsight('general')
 
   // Prefer the freshly-fetched name; fall back to the one cached at login (instant,
   // avoids showing a placeholder while the backend wakes up); then a friendly default.
@@ -183,9 +185,7 @@ export function Dashboard() {
             <Sparkles size={16} /> Ojas noticed
           </div>
           <p className="font-display text-[18px] leading-snug">
-            {screen.data?.over_goal
-              ? 'Your screen time is over goal today — evenings on your phone often line up with lighter journaling.'
-              : 'You’re keeping a steady rhythm across your logs this week. Small consistency compounds.'}
+            {insight.isLoading ? 'Looking across your logs…' : insight.data ?? 'Log a little more and Ojas will spot patterns for you.'}
           </p>
           <button
             onClick={() => navigate('/assistant')}

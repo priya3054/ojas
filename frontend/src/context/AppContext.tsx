@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { ACCENTS, MOODS, type AccentKey, type MoodKey } from '../data/theme'
+import { api, getToken } from '../lib/api'
 
 interface AppState {
   mood: MoodKey
@@ -28,6 +29,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [showMascot, setShowMascotState] = useState<boolean>(
     () => localStorage.getItem('ojas_mascot') !== 'false',
   )
+
+  // On load (if logged in), hydrate preferences from the backend so they follow the user
+  // across devices. Falls back silently to the localStorage values if the fetch fails.
+  useEffect(() => {
+    if (!getToken()) return
+    api
+      .get('/auth/me')
+      .then(({ data }) => {
+        if (data.accent_theme && ACCENTS[data.accent_theme as AccentKey]) setAccentState(data.accent_theme)
+        if (data.current_mood && MOODS[data.current_mood as MoodKey]) setMoodState(data.current_mood)
+        if (typeof data.ambient_motion === 'boolean') setAmbientMotionState(data.ambient_motion)
+        if (typeof data.show_mascot === 'boolean') setShowMascotState(data.show_mascot)
+      })
+      .catch(() => {})
+  }, [])
 
   // Whenever mood changes, update the CSS variables that tint the whole app.
   useEffect(() => {

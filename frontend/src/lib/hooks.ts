@@ -28,6 +28,8 @@ export interface Me {
   name: string
   current_mood: string
   accent_theme: string
+  ambient_motion: boolean
+  show_mascot: boolean
   screen_time_goal_hours: number
 }
 
@@ -364,5 +366,34 @@ export function useDiscover(mood?: string) {
     queryKey: ['discover', mood],
     queryFn: async () =>
       (await api.get<DiscoverResponse>(`/discover${mood ? `?mood=${mood}` : ''}`)).data,
+  })
+}
+
+// ---- Preferences & AI insights ----
+
+export function useUpdatePrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (prefs: Record<string, unknown>) =>
+      (await api.patch('/users/me', prefs)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
+export function useInsight(focus = 'general') {
+  return useQuery({
+    queryKey: ['insight', focus],
+    queryFn: async () =>
+      (await api.get<{ insight: string }>(`/insights/summary?focus=${focus}`)).data.insight,
+    staleTime: 1000 * 60 * 10, // insights don't change minute-to-minute; cache 10 min
+  })
+}
+
+export function useWeeklyReflection() {
+  return useQuery({
+    queryKey: ['weekly-reflection'],
+    queryFn: async () =>
+      (await api.get<{ reflection: string }>('/insights/weekly-reflection')).data.reflection,
+    staleTime: 1000 * 60 * 10,
   })
 }

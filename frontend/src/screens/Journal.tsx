@@ -5,8 +5,8 @@ import { Card } from '../components/Card'
 import {
   useAnalyzeSentiment,
   useCreateJournal,
-  useJournalEntries,
   useMoodSeries,
+  useWeeklyReflection,
 } from '../lib/hooks'
 
 const MOOD_EMOJI: Record<string, string> = {
@@ -50,8 +50,8 @@ export function Journal() {
   const [reflection, setReflection] = useState('')
   const analyze = useAnalyzeSentiment()
   const create = useCreateJournal()
-  const entries = useJournalEntries(30)
   const weekSeries = useMoodSeries(7)
+  const weeklyReflection = useWeeklyReflection()
 
   const voice = useVoice((t) => setContent((c) => (c ? `${c} ${t}` : t)))
 
@@ -63,20 +63,11 @@ export function Journal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content])
 
-  // Build the auto-reflection from real data once entries load.
+  // Seed the editable reflection with the real Groq-generated one once it loads.
   useEffect(() => {
-    if (!entries.data || reflection) return
-    const n = entries.data.length
-    const scored = entries.data.filter((e) => e.sentiment_score != null)
-    const avg = scored.length
-      ? scored.reduce((s, e) => s + (e.sentiment_score as number), 0) / scored.length
-      : 0
-    const tone = avg > 0.2 ? 'lighter and steadier' : avg < -0.2 ? 'heavier than usual' : 'fairly even'
-    setReflection(
-      `Across your last ${n} entries, your mood has felt ${tone}. Keep noticing what shifts it — small patterns add up.`,
-    )
+    if (weeklyReflection.data && !reflection) setReflection(weeklyReflection.data)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries.data])
+  }, [weeklyReflection.data])
 
   const chartData = (weekSeries.data ?? [])
     .filter((p) => p.avg_sentiment !== null)
