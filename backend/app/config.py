@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     # Comma-separated list of frontend origins allowed to call this API (CORS).
     cors_origins: str = "http://localhost:5173"
+    # Where to send the browser back to after the Google OAuth callback completes.
+    frontend_url: str = "http://localhost:5173"
 
     # YouTube Data API (Discover screen) — empty = use stub data
     youtube_api_key: str = ""

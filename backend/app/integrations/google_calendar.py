@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -15,6 +16,19 @@ class GoogleNotConfigured(Exception):
 
 def is_configured() -> bool:
     return bool(settings.google_client_id and settings.google_client_secret)
+
+
+# The OAuth "state" carries the user id through Google's redirect, signed so it can't be
+# tampered with — this is how the callback knows which user is connecting their calendar.
+def _encode_state(user_id: int) -> str:
+    return jwt.encode({"uid": user_id}, settings.secret_key, algorithm="HS256")
+
+
+def _decode_state(state: str) -> int | None:
+    try:
+        return jwt.decode(state, settings.secret_key, algorithms=["HS256"]).get("uid")
+    except JWTError:
+        return None
 
 
 def _build_flow():
@@ -35,18 +49,28 @@ def _build_flow():
     )
 
 
-def get_authorization_url() -> str:
+def get_authorization_url(user_id: int) -> str:
     if not is_configured():
         raise GoogleNotConfigured()
     flow = _build_flow()
     # access_type=offline + prompt=consent ensures we get a long-lived refresh token.
-    auth_url, _state = flow.authorization_url(access_type="offline", prompt="consent")
+    auth_url, _state = flow.authorization_url(
+        access_type="offline", prompt="consent", state=_encode_state(user_id)
+    )
     return auth_url
 
 
-def exchange_code_and_store(code: str, user: User, db: Session) -> None:
+def exchange_code_and_store(code: str, state: str, db: Session) -> bool:
+    """Trade the auth code for tokens and store them on the user identified by `state`."""
     if not is_configured():
         raise GoogleNotConfigured()
+    user_id = _decode_state(state)
+    if user_id is None:
+        return False
+    user = db.get(User, user_id)
+    if user is None:
+        return False
+
     flow = _build_flow()
     flow.fetch_token(code=code)
     creds = flow.credentials
@@ -55,6 +79,11 @@ def exchange_code_and_store(code: str, user: User, db: Session) -> None:
     user.google_refresh_token = creds.refresh_token
     user.google_token_expiry = creds.expiry
     db.commit()
+    return True
+
+
+def is_connected(user: User) -> bool:
+    return bool(user.google_refresh_token)
 
 
 def _credentials_for(user: User):

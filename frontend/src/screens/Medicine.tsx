@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Bar, BarChart, ResponsiveContainer, XAxis, Tooltip } from 'recharts'
 import { Pill, Plus, Check, CalendarClock } from 'lucide-react'
 import { Card } from '../components/Card'
@@ -6,10 +7,66 @@ import {
   useAddSchedule,
   useAdherence,
   useDosesToday,
+  useGoogleConnect,
+  useGoogleStatus,
+  useGoogleSync,
   useMarkDoseTaken,
   useRefill,
   useRiskPattern,
 } from '../lib/hooks'
+
+// Real Google Calendar connect + sync control.
+function GoogleCalendarRow() {
+  const statusQ = useGoogleStatus()
+  const connect = useGoogleConnect()
+  const sync = useGoogleSync()
+  const [params] = useSearchParams()
+  const justConnected = params.get('google_connected') === '1'
+  const justFailed = params.get('google_failed') === '1'
+
+  if (statusQ.data && !statusQ.data.configured) {
+    return (
+      <div className="mt-3 flex items-center gap-2 text-[11.5px] text-muted">
+        <CalendarClock size={14} /> Google Calendar sync isn't configured on this server.
+      </div>
+    )
+  }
+
+  const connected = statusQ.data?.connected || justConnected
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px]">
+      <CalendarClock size={14} className="text-muted" />
+      {connected ? (
+        <>
+          <span className="text-success">Connected to Google Calendar</span>
+          <button
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+            className="rounded-lg px-2.5 py-1 font-semibold text-white disabled:opacity-50"
+            style={{ background: 'var(--accent-deep)' }}
+          >
+            {sync.isPending ? 'Syncing…' : 'Sync doses now'}
+          </button>
+          {sync.data && <span className="text-muted">Added {sync.data.created} recurring event(s).</span>}
+        </>
+      ) : (
+        <>
+          <span className="text-muted">Sync your doses as calendar events.</span>
+          <button
+            onClick={() => connect.mutate()}
+            disabled={connect.isPending}
+            className="rounded-lg border px-2.5 py-1 font-semibold text-body disabled:opacity-50"
+            style={{ borderColor: 'rgba(40,60,110,0.13)' }}
+          >
+            Connect Google Calendar
+          </button>
+          {justFailed && <span className="text-caution">Connection failed — please try again.</span>}
+        </>
+      )}
+    </div>
+  )
+}
 
 function AddMedicineForm({ onDone }: { onDone: () => void }) {
   const add = useAddSchedule()
@@ -123,9 +180,7 @@ export function Medicine() {
             })}
           </div>
 
-          <div className="mt-3 flex items-center gap-2 text-[11.5px] text-muted">
-            <CalendarClock size={14} /> Synced to Google Calendar · auto-reschedules missed doses.
-          </div>
+          <GoogleCalendarRow />
         </Card>
 
         {/* Right stack */}

@@ -397,3 +397,34 @@ export function useWeeklyReflection() {
     staleTime: 1000 * 60 * 10,
   })
 }
+
+// ---- Google Calendar ----
+
+export interface GoogleStatus {
+  configured: boolean
+  connected: boolean
+}
+
+export function useGoogleStatus() {
+  return useQuery({
+    queryKey: ['google', 'status'],
+    queryFn: async () => (await api.get<GoogleStatus>('/integrations/google/status')).data,
+  })
+}
+
+export function useGoogleConnect() {
+  return useMutation({
+    mutationFn: async () =>
+      (await api.get<{ authorization_url: string }>('/integrations/google/authorize')).data,
+    onSuccess: (data) => {
+      window.location.href = data.authorization_url // send the user to Google's consent screen
+    },
+  })
+}
+
+export function useGoogleSync() {
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post<{ connected: boolean; created: number }>('/integrations/google/sync')).data,
+  })
+}
