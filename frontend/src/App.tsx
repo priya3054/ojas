@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { RequireAuth } from './components/RequireAuth'
 import { Login } from './screens/Login'
+import { ResetPassword } from './screens/ResetPassword'
 import { Placeholder } from './screens/Placeholder'
 import { Dashboard } from './screens/Dashboard'
 import { Chat } from './screens/Chat'
@@ -33,6 +34,7 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Everything else requires a logged-in user */}
       <Route element={<RequireAuth />}>

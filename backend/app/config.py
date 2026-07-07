@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # Where to send the browser back to after the Google OAuth callback completes.
     frontend_url: str = "http://localhost:5173"
 
+    # Resend (transactional email) for password-reset links. Empty = emails are logged, not sent.
+    resend_api_key: str = ""
+    email_from: str = "Ojas <onboarding@resend.dev>"
+
     # YouTube Data API (Discover screen) — empty = use stub data
     youtube_api_key: str = ""
 

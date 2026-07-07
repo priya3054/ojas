@@ -30,3 +30,20 @@ def decode_access_token(token: str) -> str | None:
     except JWTError:
         return None
     return payload.get("sub")
+
+
+def create_reset_token(email: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=30)
+    return jwt.encode(
+        {"sub": email, "purpose": "reset", "exp": expire}, settings.secret_key, algorithm=ALGORITHM
+    )
+
+
+def verify_reset_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+    if payload.get("purpose") != "reset":
+        return None
+    return payload.get("sub")

@@ -8,16 +8,32 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.email import send_password_reset
 from app.models.user import User
 from app.schemas.auth import Token
 from app.schemas.user import UserCreate, UserRead
-from app.security import create_access_token, hash_password, verify_password
+from app.security import (
+    create_access_token,
+    create_reset_token,
+    hash_password,
+    verify_password,
+    verify_reset_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class GoogleLogin(BaseModel):
     credential: str  # the ID token returned by Google Identity Services
+
+
+class ForgotPassword(BaseModel):
+    email: str
+
+
+class ResetPassword(BaseModel):
+    token: str
+    password: str
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -84,6 +100,34 @@ def google_login(payload: GoogleLogin, db: Session = Depends(get_db)):
         db.refresh(user)
 
     return Token(access_token=create_access_token(subject=user.email))
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPassword, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    # Only send if the account exists — but always return the same response so we never
+    # reveal whether an email is registered.
+    if user is not None:
+        token = create_reset_token(user.email)
+        reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+        send_password_reset(user.email, reset_url)
+    return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
+    email = verify_reset_token(payload.token)
+    if email is None:
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired.")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=400, detail="Account not found.")
+    user.hashed_password = hash_password(payload.password)
+    db.commit()
+    return {"message": "Your password has been reset. You can now sign in."}
 
 
 @router.get("/me", response_model=UserRead)
