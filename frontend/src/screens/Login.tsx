@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, setToken, setUserName } from '../lib/api'
 import { AuthMascot } from '../components/AuthMascot'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 const inputBase =
   'w-full rounded-[11px] border bg-[#F7FAFD] px-[14px] py-3 text-[14px] text-ink outline-none ' +
@@ -30,6 +32,19 @@ export function Login() {
   const [busy, setBusy] = useState(false)
 
   const isSignup = mode === 'signup'
+  const googleBtnRef = useRef<HTMLDivElement>(null)
+
+  // Shared: once we have a JWT, cache the name and go to the dashboard.
+  async function finishLogin(token: string) {
+    setToken(token)
+    try {
+      const me = await api.get('/auth/me')
+      setUserName(me.data.name)
+    } catch {
+      // If /auth/me is slow (backend waking up), the dashboard fetches it itself.
+    }
+    navigate('/dashboard')
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -41,21 +56,48 @@ export function Login() {
       }
       const form = new URLSearchParams({ username: email, password })
       const res = await api.post('/auth/login', form)
-      setToken(res.data.access_token)
-      // Cache the user's name so the dashboard greeting shows it instantly.
-      try {
-        const me = await api.get('/auth/me')
-        setUserName(me.data.name)
-      } catch {
-        // If /auth/me is slow (backend waking up), the dashboard still fetches it itself.
-      }
-      navigate('/dashboard')
+      await finishLogin(res.data.access_token)
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Something went wrong. Please try again.')
     } finally {
       setBusy(false)
     }
   }
+
+  // Load Google Identity Services and render the official Sign-in button.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+    async function handleCredential(response: { credential: string }) {
+      setError('')
+      try {
+        const res = await api.post('/auth/google', { credential: response.credential })
+        await finishLogin(res.data.access_token)
+      } catch (err: any) {
+        setError(err?.response?.data?.detail || 'Google sign-in failed. Please try again.')
+      }
+    }
+    function render() {
+      const g = (window as any).google
+      if (!g || !googleBtnRef.current) return
+      g.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential })
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: 'continue_with',
+      })
+    }
+    if ((window as any).google) {
+      render()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.onload = render
+      document.body.appendChild(script)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div
@@ -86,16 +128,20 @@ export function Login() {
           className="rounded-[20px] border bg-white px-[26px] py-7"
           style={{ borderColor: 'rgba(40,60,110,0.07)', boxShadow: '0 10px 30px rgba(40,60,110,0.06)' }}
         >
-          {/* Continue with Google */}
-          <button
-            type="button"
-            onClick={() => setError('Google sign-in is being set up. Please use email for now.')}
-            className="flex w-full items-center justify-center gap-2.5 rounded-xl border bg-white py-3 text-[14px] font-semibold text-[#3A4A6B] transition-colors hover:bg-[#F5F8FC]"
-            style={{ borderColor: 'rgba(40,60,110,0.13)' }}
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
+          {/* Continue with Google — Google renders its official button into this div */}
+          {GOOGLE_CLIENT_ID ? (
+            <div ref={googleBtnRef} className="flex justify-center [color-scheme:light]" />
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl border bg-white py-3 text-[14px] font-semibold text-[#3A4A6B] opacity-60"
+              style={{ borderColor: 'rgba(40,60,110,0.13)' }}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+          )}
 
           {/* Divider */}
           <div className="my-5 flex items-center gap-3">

@@ -1,7 +1,11 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
@@ -10,6 +14,10 @@ from app.schemas.user import UserCreate, UserRead
 from app.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class GoogleLogin(BaseModel):
+    credential: str  # the ID token returned by Google Identity Services
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -41,6 +49,41 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     access_token = create_access_token(subject=user.email)
     return Token(access_token=access_token)
+
+
+@router.post("/google", response_model=Token)
+def google_login(payload: GoogleLogin, db: Session = Depends(get_db)):
+    if not settings.google_client_id:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token
+
+    try:
+        # Verifies the token's signature, expiry, and that it was issued for OUR app.
+        info = id_token.verify_oauth2_token(
+            payload.credential, google_requests.Request(), settings.google_client_id
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = info.get("email")
+    if not email or not info.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google account email not verified")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        # First time signing in with Google → create the account (random unusable password).
+        user = User(
+            email=email,
+            name=info.get("name") or email.split("@")[0],
+            hashed_password=hash_password(secrets.token_urlsafe(32)),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    return Token(access_token=create_access_token(subject=user.email))
 
 
 @router.get("/me", response_model=UserRead)
