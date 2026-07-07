@@ -428,3 +428,46 @@ export function useGoogleSync() {
       (await api.post<{ connected: boolean; created: number }>('/integrations/google/sync')).data,
   })
 }
+
+// ---- Day Recap ----
+
+export interface RecapAnalysis {
+  id: number
+  overall_read: string
+  confidence: number | null
+  stress_score: number | null
+  energy_score: number | null
+  positivity_score: number | null
+  themes: string[]
+  mood_label: string
+  transcript_summary: string
+  crisis: boolean
+}
+
+export function useAnalyzeRecap() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: { audio: Blob; duration: number }) => {
+      const form = new FormData()
+      form.append('audio', args.audio, 'recap.webm')
+      form.append('duration_seconds', String(args.duration))
+      return (await api.post<RecapAnalysis>('/day-recap/analyze', form)).data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['day-recap'] }),
+  })
+}
+
+export interface RecentRecap {
+  id: number
+  date: string
+  duration_seconds: number
+  mood_label: string
+  overall_read: string
+}
+
+export function useRecentRecaps() {
+  return useQuery({
+    queryKey: ['day-recap', 'recent'],
+    queryFn: async () => (await api.get<RecentRecap[]>('/day-recap')).data,
+  })
+}

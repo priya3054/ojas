@@ -6,6 +6,7 @@ from app.routers import (
     auth,
     chat,
     cycle,
+    day_recap,
     discover,
     export,
     habits,
@@ -40,6 +41,7 @@ app.include_router(export.router)
 app.include_router(integrations.router)
 app.include_router(users.router)
 app.include_router(insights.router)
+app.include_router(day_recap.router)
 
 
 @app.on_event("startup")

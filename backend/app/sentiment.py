@@ -28,6 +28,12 @@ def _get_pipeline():
     return _emotion_pipeline
 
 
+def analyze_emotions(text: str) -> dict:
+    """Return the full emotion distribution {label: score} from the model."""
+    scores = _get_pipeline()(text)[0]
+    return {item["label"]: item["score"] for item in scores}
+
+
 def analyze_sentiment(text: str) -> dict:
     scores = _get_pipeline()(text)[0]
     scores_by_label = {item["label"]: item["score"] for item in scores}
